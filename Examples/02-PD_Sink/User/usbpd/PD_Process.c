@@ -478,7 +478,7 @@ UINT8 PD_Send_Handle( UINT8 *pbuf, UINT8 len )
         NVIC_DisableIRQ( USBPD_IRQn );
         PD_Phy_SendPack( 0x01, PD_Tx_Buf, ( len + 2 ), UPD_SOP0 );
 
-        /* Set receive timeout 750US */
+        /* Set receive timeout ~2 ms (250 x 8 us; was 750 us, at the edge of tReceive) */
         cnt = 250;
         while( --cnt )
         {
@@ -491,7 +491,7 @@ UINT8 PD_Send_Handle( UINT8 *pbuf, UINT8 len )
                     break;
                 }
             }
-            Delay_Us( 3 );
+            Delay_Us( 8 );
         }
         if( cnt !=0 )
         {
