@@ -361,7 +361,10 @@ void PD_Phy_SendPack( UINT8 mode, UINT8 *pbuf, UINT8 len, UINT8 sop )
     if( mode )
     {
         /* Wait for the send to complete, this will definitely complete, no need to do a timeout */
-        while( (USBPD->STATUS & IF_TX_END) == 0 );
+        /* bounded: a BMC TX into an absent/detached CC partner never sets
+         * IF_TX_END; without a cap this spins forever and wedges the whole
+         * firmware (a real PD TX completes in <2 ms; ~60 ms here is ample). */
+        { volatile uint32_t _txto = 600000; while( (USBPD->STATUS & IF_TX_END) == 0 && --_txto ); }
         USBPD->STATUS |= IF_TX_END;
         if((USBPD->CONFIG & CC_SEL) == CC_SEL )
         {
