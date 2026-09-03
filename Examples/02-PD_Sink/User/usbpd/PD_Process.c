@@ -740,6 +740,13 @@ void PD_Main_Proc( )
     /* Receive message processing */
     if( PD_Ctl.Flag.Bit.Msg_Recvd )
     {
+        /* Clear the flag BEFORE handling: any handler that replies re-enables
+         * the USBPD IRQ (PD_Send_Handle -> PD_Rx_Mode), so the ISR may GoodCRC
+         * and flag the NEXT message while we are still in here. The stock code
+         * cleared the flag at the end and re-armed RX, silently dropping that
+         * already-acknowledged message (an Accept or PS_RDY the source will
+         * never retransmit). */
+        PD_Ctl.Flag.Bit.Msg_Recvd = 0;
         /* Adapter communication idle timing */
         PD_Ctl.Adapter_Idle_Cnt = 0x00;
         pd_header = PD_Rx_Buf[ 0 ] & 0x1F;
@@ -853,9 +860,13 @@ void PD_Main_Proc( )
                 break;
         }
 
-        /* Message has been processed, interrupt reception is turned on again */
-        PD_Rx_Mode();
-        PD_Ctl.Flag.Bit.Msg_Recvd = 0;                                    /* Clear the received flag */
+        /* Message has been processed, interrupt reception is turned on again --
+         * unless the ISR already took the next message (flag set again), in
+         * which case the IRQ is parked and PD_Rx_Buf holds it for the next pass. */
+        if( PD_Ctl.Flag.Bit.Msg_Recvd == 0 )
+        {
+            PD_Rx_Mode();
+        }
         PD_Ctl.PD_BusIdle_Timer = 0;                                      /* Idle time cleared */
     }
 }
