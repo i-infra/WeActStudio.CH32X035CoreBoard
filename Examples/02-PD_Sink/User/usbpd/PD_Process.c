@@ -841,6 +841,15 @@ void PD_Main_Proc( )
 
             default:
                 printf("Unsupported Command\r\n");
+                /* PD 3.0 requires a Not_Supported reply to anything we don't
+                 * handle (Get_Source_Cap, DR_Swap, Get_Sink_Cap_Extended, ...);
+                 * an unanswered message makes the source Soft_Reset us. */
+                if( PD_Ctl.Flag.Bit.PD_Version )
+                {
+                    Delay_Ms( 1 );
+                    PD_Load_Header( 0x00, DEF_TYPE_NOT_SUPPORT );
+                    PD_Send_Handle( NULL, 0 );
+                }
                 break;
         }
 
