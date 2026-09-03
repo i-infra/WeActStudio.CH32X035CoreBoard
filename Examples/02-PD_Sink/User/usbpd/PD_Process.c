@@ -176,6 +176,7 @@ void PD_PHY_Reset( void )
     PD_Ctl.Flag.Bit.Stop_Det_Chk = 0;                                     /* PD disconnection detection is enabled by default */
     PD_Ctl.PD_State = STA_IDLE;                                           /* Set idle state */
     PD_Ctl.Flag.Bit.PD_Comm_Succ = 0;
+    PD_Ctl.Msg_ID = 0;                                                    /* MessageIDCounter restarts after a reset */
 }
 
 /*********************************************************************
@@ -709,6 +710,7 @@ void PD_Main_Proc( )
             /* Send soft reset, if sent successfully, mode unchanged, count +1 for retry */
             PD_Load_Header( 0x00, DEF_TYPE_SOFT_RESET );
             status = PD_Send_Handle( NULL, 0 );
+            PD_Ctl.Msg_ID = 0;                                                  /* both sides restart MessageIDCounter at 0 */
             if( status == DEF_PD_TX_OK )
             {
                 /* current mode unchanged, jump to initial state of current mode, mode retry count, switch mode if exceeded */
@@ -796,6 +798,7 @@ void PD_Main_Proc( )
 
             case DEF_TYPE_SOFT_RESET:
                 Delay_Ms( 1 );
+                PD_Ctl.Msg_ID = 0;                                          /* MessageIDCounter restarts at 0 (Accept is ID 0) */
                 PD_Load_Header( 0x00, DEF_TYPE_ACCEPT );
                 PD_Send_Handle( NULL, 0 );
                 printf("DEF_TYPE_SOFT_RESET\r\n");
