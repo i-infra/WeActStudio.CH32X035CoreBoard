@@ -75,7 +75,18 @@ void USBPD_IRQHandler(void)
                 if( ( USBPD->BMC_BYTE_CNT != 6 ) || ( ( PD_Rx_Buf[ 0 ] & 0x1F ) != DEF_TYPE_GOODCRC ) )
                 {
                     Delay_Us(30);                       /* Delay 30us, answer GoodCRC */
-                    PD_Ack_Buf[ 0 ] = 0x41;
+                    /* Negotiate the spec revision: take the peer's (header bits
+                     * 7:6), capped at 3.0, and echo it in the GoodCRC. The stock
+                     * code never set PD_Version, so every message it sent was
+                     * stamped Rev 2.0 -- a 3.0 source then drops the link to 2.0
+                     * and stops offering APDOs, which is why PPS requests were
+                     * Accepted and then abandoned (no PS_RDY, caps re-flood). */
+                    {
+                        UINT8 rev = PD_Rx_Buf[ 0 ] & 0xC0;
+                        if( rev > 0x80 ) rev = 0x80;
+                        PD_Ctl.Flag.Bit.PD_Version = ( rev == 0x80 );
+                        PD_Ack_Buf[ 0 ] = 0x01 | rev;
+                    }
                     PD_Ack_Buf[ 1 ] = ( PD_Rx_Buf[ 1 ] & 0x0E ) | PD_Ctl.Flag.Bit.Auto_Ack_PRRole;
                     USBPD->CONFIG |= IE_TX_END ;
                     PD_Phy_SendPack( 0, PD_Ack_Buf, 2, UPD_SOP0 );
